@@ -15,7 +15,7 @@ import java.net.Socket;
  */
 public class FileTransferClient extends Socket {
 
-    private static final String SERVER_IP = "127.0.0.1"; // 服务端IP
+    private static final String SERVER_IP = "10.128.221.165"; // 服务端IP
     private static final int SERVER_PORT = 8899; // 服务端端口
 
     private Socket client;

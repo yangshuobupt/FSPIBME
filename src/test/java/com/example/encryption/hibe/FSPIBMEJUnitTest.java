@@ -25,22 +25,9 @@ public class FSPIBMEJUnitTest {
     @Test
     public void test1() throws Exception {
         String id = "E";
-        //String[] tau = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};
-        //String[] tag = {"0", "0", "0", "0"};
-        String tau = "000000000000";
-        String tag = "0000";
-        //String[] ids = {"E", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};
+        String[] taus = {"00000000000", "000000000000", "0000000000000", "000000000000", "000000000000", "000000000000"};
+        String[] tags = {"000", "000", "000", "00", "000", "0000"};
 
-        String[] ids = null;
-        int num = 16;
-        for (int i = 0; i <= num; i++) {
-            if (i == 0) {
-                ids = new String[num + 1];
-                ids[0] = "E";
-            } else {
-                ids[i] = "0";
-            }
-        }
 
         long startTime, endTime;
         ObjectOutputStream oos;
@@ -59,71 +46,90 @@ public class FSPIBMEJUnitTest {
         PairingKeySerParameter publicKey = keyPair.getPublic();
         PairingKeySerParameter masterKey = keyPair.getPrivate();
 
-        //Keygen
-        startTime = System.currentTimeMillis();
-        FSPIBMESKeySerParameter sk = fspibmeEngine.SkeyGen(publicKey, masterKey, id);
-        endTime = System.currentTimeMillis();
-        System.out.println("SKGEN运行时间：" + (endTime - startTime) + "ms");
+        for (int j = 0; j < 6; j++) {
+            String[] ids = null;
+            String tau = taus[j];
+            String tag = tags[j];
 
-        startTime = System.currentTimeMillis();
-        FSPIBMERKeySerParameter rk = fspibmeEngine.RkeyGen(publicKey, masterKey, ids);
-        System.out.println("目前RK拥有的结点秘钥 ：" + rk.getTk().keySet());
-        endTime = System.currentTimeMillis();
-        System.out.println("RKGEN运行时间：" + (endTime - startTime) + "ms");
+            int num = tau.length() + tag.length();
+            for (int i = 0; i <= num; i++) {
+                if (i == 0) {
+                    ids = new String[num + 1];
+                    ids[0] = "E";
+                } else {
+                    ids[i] = "0";
+                }
+            }
+            //Keygen
+            startTime = System.currentTimeMillis();
+            FSPIBMESKeySerParameter sk = fspibmeEngine.SkeyGen(publicKey, masterKey, id);
+            endTime = System.currentTimeMillis();
+            System.out.println("SKGEN运行时间：" + (endTime - startTime) + "ms");
 
-        oos = new ObjectOutputStream(new FileOutputStream("outputs/rk"));
-        oos.writeObject(rk);
-        oos.close();
-        file = new File("outputs/rk");
-        ois = new ObjectInputStream(new FileInputStream(file));
-        //FSPIBMEKeySerParameter newSk = (FSPIBMEKeySerParameter) ois.readObject();
-        System.out.println(System.currentTimeMillis());
-        client.sendFile("rk");
+            startTime = System.currentTimeMillis();
+            FSPIBMERKeySerParameter rk = fspibmeEngine.RkeyGen(publicKey, masterKey, ids);
+            //System.out.println("目前RK拥有的结点秘钥 ：" + rk.getTk().keySet());
+            endTime = System.currentTimeMillis();
+            System.out.println("RKGEN运行时间：" + (endTime - startTime) + "ms");
 
-        //Verify
-        startTime = System.currentTimeMillis();
-        StringBuffer HIBEId = new StringBuffer();
-        HIBEId.append("E");
-        HIBEId.append(tau);
-        HIBEId.append(tag);
-        String strHIBEId = HIBEId.toString();
-        System.out.println("ver:" + fspibmeEngine.verifyESK(publicKey, rk.getTk().get(strHIBEId)));
-        endTime = System.currentTimeMillis();
-        System.out.println("Ver运行时间：" + (endTime - startTime) + "ms");
+            //序列化
+            oos = new ObjectOutputStream(new FileOutputStream("outputs/rk"));
+            oos.writeObject(rk);
+            oos.close();
+//            file = new File("outputs/rk");
+//            ois = new ObjectInputStream(new FileInputStream(file));
+//            System.out.println(System.currentTimeMillis());
+//            client.sendFile("rk");
 
-        //Encryption
-        Element message = pairing.getGT().newRandomElement().getImmutable();
+            //Verify
+            startTime = System.currentTimeMillis();
+            StringBuffer HIBEId = new StringBuffer();
+            HIBEId.append("E");
+            HIBEId.append(tau);
+            HIBEId.append(tag);
+            String strHIBEId = HIBEId.toString();
+            System.out.println("ver:" + fspibmeEngine.verifyESK(publicKey, rk.getTk().get(strHIBEId)));
+            endTime = System.currentTimeMillis();
+            System.out.println("Ver运行时间：" + (endTime - startTime) + "ms");
 
-        startTime = System.currentTimeMillis();
-        FSPIBMECiphertextSerParameter ciphertext = fspibmeEngine.encryption(engine, publicKey, sk, id, message, tau, tag);
-        endTime = System.currentTimeMillis();
-        System.out.println("加密运行时间：" + (endTime - startTime) + "ms");
-        System.out.println("enc" + message);
+            //Encryption
+            Element message = pairing.getGT().newRandomElement().getImmutable();
 
-        //Decryption
-        startTime = System.currentTimeMillis();
+            startTime = System.currentTimeMillis();
+            FSPIBMECiphertextSerParameter ciphertext = fspibmeEngine.encryption(engine, publicKey, sk, id, message, tau, tag);
+            endTime = System.currentTimeMillis();
+            System.out.println("加密运行时间：" + (endTime - startTime) + "ms");
+            System.out.println("enc" + message);
 
-        StringBuffer decId = new StringBuffer();
-        decId.append(id);
-        decId.append(tau);
-        decId.append(ciphertext.getTag());
-        String strDecId = decId.toString();
-        System.out.println(strDecId);
-        FSPIBMEESKSerParameter eskId = rk.getTk().get(strDecId);
+            //Decryption
+            startTime = System.currentTimeMillis();
 
-        Element anMessage = fspibmeEngine.decryption(engine, publicKey, rk, eskId, id, ciphertext, tau);
+            StringBuffer decId = new StringBuffer();
+            decId.append(id);
+            decId.append(tau);
+            decId.append(ciphertext.getTag());
+            String strDecId = decId.toString();
+            System.out.println(strDecId);
+            FSPIBMEESKSerParameter eskId = rk.getTk().get(strDecId);
 
-        endTime = System.currentTimeMillis();
-        System.out.println("解密运行时间：" + (endTime - startTime) + "ms");
-        System.out.println("dec" + anMessage);
+//            oos = new ObjectOutputStream(new FileOutputStream("outputs/esk"));
+//            oos.writeObject(eskId.getX_rho());
+//            oos.close();
+//            System.out.println(System.currentTimeMillis());
+//            client.sendFile("esk");
 
-        //puncture
-        System.out.println("======Puncture=====");
-        startTime = System.currentTimeMillis();
-        rk = fspibmeEngine.Puncture(publicKey, rk, engine, tau, tag);
-        endTime = System.currentTimeMillis();
-        System.out.println("Puncture运行时间：" + (endTime - startTime) + "ms");
-        System.out.println("目前RK拥有的结点秘钥有" + rk.getTk().keySet().size() + "个 ：" + rk.getTk().keySet());
+            Element anMessage = fspibmeEngine.decryption(engine, publicKey, rk, eskId, id, ciphertext, tau);
+
+            endTime = System.currentTimeMillis();
+            System.out.println("解密运行时间：" + (endTime - startTime) + "ms");
+            System.out.println("dec" + anMessage);
+
+            //puncture
+            startTime = System.currentTimeMillis();
+            rk = fspibmeEngine.Puncture(publicKey, rk, engine, tau, tag);
+            endTime = System.currentTimeMillis();
+            System.out.println("Puncture运行时间：" + (endTime - startTime) + "ms");
+            //System.out.println("目前RK拥有的结点秘钥有" + rk.getTk().keySet().size() + "个 ：" + rk.getTk().keySet());
 
 
 //        Set<String> set1 = rk.getTk().keySet();
@@ -136,6 +142,8 @@ public class FSPIBMEJUnitTest {
 //        System.out.println("目前RK拥有的结点秘钥有" + rk.getTk().keySet().size() + "个 ：" + rk.getTk().keySet());
 //        Set<String> set2 = rk.getTk().keySet();
 //        setCompare(set1, set2);
+        }
+
 
     }
 }

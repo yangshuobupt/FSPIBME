@@ -5,7 +5,9 @@ import cn.edu.buaa.crypto.algebra.serparams.PairingKeySerParameter;
 import cn.edu.buaa.crypto.encryption.hibe.bbg05.serparams.HIBEBBG05SecretKeySerParameter;
 import it.unisa.dia.gas.jpbc.Element;
 
-public class FSPIBMEESKSerParameter {
+import java.io.Serializable;
+
+public class FSPIBMEESKSerParameter implements Serializable {
     private transient PairingKeySerParameter X_rho;
     private transient Element R_rho;
 
