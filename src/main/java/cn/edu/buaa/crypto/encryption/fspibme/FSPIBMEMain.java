@@ -3,6 +3,7 @@ package cn.edu.buaa.crypto.encryption.fspibme;
 import cn.edu.buaa.crypto.algebra.serparams.PairingKeySerPair;
 import cn.edu.buaa.crypto.algebra.serparams.PairingKeySerParameter;
 import cn.edu.buaa.crypto.encryption.fspibme.serparams.FSPIBMECiphertextSerParameter;
+import cn.edu.buaa.crypto.encryption.fspibme.serparams.FSPIBMEESKSerParameter;
 import cn.edu.buaa.crypto.encryption.fspibme.serparams.FSPIBMERKeySerParameter;
 import cn.edu.buaa.crypto.encryption.fspibme.serparams.FSPIBMESKeySerParameter;
 import cn.edu.buaa.crypto.encryption.fspibme.utils.BinaryTreeBuild;
@@ -15,19 +16,26 @@ import it.unisa.dia.gas.jpbc.PairingParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
 import java.util.Set;
 
 import static cn.edu.buaa.crypto.utils.PairingUtils.setCompare;
 
 public class FSPIBMEMain {
-    private String tau;
+    public static void main(String[] args) throws Exception {
+        String id = "E";
+        String[] taus = {"00000000000", "000000000000", "0000000000000", "000000000000", "000000000000", "000000000000"};
+        String[] tags = {"000", "000", "000", "00", "000", "0000"};
 
-    //private static final String[] identityVector12 = {"E", "0"};
 
-
-    public static void main(String[] args) throws InvalidCipherTextException {
-        String id = "e";
         long startTime, endTime;
+        ObjectOutputStream oos;
+//        ObjectInputStream ois;
+//        File file;
+//        FileTransferClient client = new FileTransferClient();
+
 
         PairingParameters pairingParameters = PairingFactory.getPairingParameters(TestUtils.TEST_PAIRING_PARAMETERS_PATH_a_80_256);
         Pairing pairing = PairingFactory.getPairing(pairingParameters);
@@ -39,43 +47,93 @@ public class FSPIBMEMain {
         PairingKeySerParameter publicKey = keyPair.getPublic();
         PairingKeySerParameter masterKey = keyPair.getPrivate();
 
-        //Keygen
-        startTime = System.currentTimeMillis();
-        FSPIBMESKeySerParameter sk = fspibmeEngine.SkeyGen(publicKey, masterKey, id);
-        endTime = System.currentTimeMillis();
-        System.out.println("SKGEN运行时间：" + (endTime - startTime) + "ms");
+        for (int j = 0; j < 6; j++) {
+            String[] ids = null;
+            String tau = taus[j];
+            String tag = tags[j];
 
-        startTime = System.currentTimeMillis();
-        FSPIBMERKeySerParameter rk = fspibmeEngine.RkeyGen(publicKey, masterKey, id);
-        System.out.println("目前RK拥有的结点秘钥 ：" + rk.getTk().keySet());
-        endTime = System.currentTimeMillis();
-        System.out.println("RKGEN运行时间：" + (endTime - startTime) + "ms");
+            int num = tau.length() + tag.length();
+            for (int i = 0; i <= num; i++) {
+                if (i == 0) {
+                    ids = new String[num + 1];
+                    ids[0] = "E";
+                } else {
+                    ids[i] = "0";
+                }
+            }
+            System.out.println(num);
+            //Keygen
+            startTime = System.currentTimeMillis();
+            FSPIBMESKeySerParameter sk = fspibmeEngine.SkeyGen(publicKey, masterKey, id);
+            endTime = System.currentTimeMillis();
+            System.out.println("SKGEN运行时间：" + (endTime - startTime) + "ms");
 
-        //Encryption
-        Element message = pairing.getGT().newRandomElement().getImmutable();
-        String tau = "0";
-        String tag = "0";
-        startTime = System.currentTimeMillis();
-        FSPIBMECiphertextSerParameter ciphertext = fspibmeEngine.encryption(engine, publicKey, sk, id, message, tau, tag);
-        endTime = System.currentTimeMillis();
-        System.out.println("加密运行时间：" + (endTime - startTime) + "ms");
-        System.out.println("enc" + message);
+            startTime = System.currentTimeMillis();
+            FSPIBMERKeySerParameter rk = fspibmeEngine.RkeyGen(publicKey, masterKey, ids);
+            //System.out.println("目前RK拥有的结点秘钥 ：" + rk.getTk().keySet());
+            endTime = System.currentTimeMillis();
+            System.out.println("RKGEN运行时间：" + (endTime - startTime) + "ms");
 
-//        //Decryption
-//        startTime = System.currentTimeMillis();
-//        Element anMessage = fspibmeEngine.decryption(engine, publicKey, rk, id, ciphertext, tau);
-//        endTime = System.currentTimeMillis();
-//        System.out.println("解密运行时间：" + (endTime - startTime) + "ms");
-//        System.out.println("dec" + anMessage);
+            //序列化
+            oos = new ObjectOutputStream(new FileOutputStream("rk"));
+            oos.writeObject(rk);
+            oos.close();
+//            file = new File("outputs/rk");
+//            ois = new ObjectInputStream(new FileInputStream(file));
+//            System.out.println(System.currentTimeMillis());
+//            client.sendFile("rk");
 
-//        //puncture
-//        System.out.println("======Puncture=====");
-//        startTime = System.currentTimeMillis();
-//        rk = fspibmeEngine.Puncture(publicKey, rk, engine, punID[i], tag);
-//        endTime = System.currentTimeMillis();
-//        System.out.println("Puncture运行时间：" + (endTime - startTime) + "ms");
-//        System.out.println("目前RK拥有的结点秘钥有" + rk.getTk().keySet().size() + "个 ：" + rk.getTk().keySet());
-//
+            //Verify
+            startTime = System.currentTimeMillis();
+            StringBuffer HIBEId = new StringBuffer();
+            HIBEId.append("E");
+            HIBEId.append(tau);
+            HIBEId.append(tag);
+            String strHIBEId = HIBEId.toString();
+            System.out.println("ver:" + fspibmeEngine.verifyESK(publicKey, rk.getTk().get(strHIBEId)));
+            endTime = System.currentTimeMillis();
+            System.out.println("Ver运行时间：" + (endTime - startTime) + "ms");
+
+            //Encryption
+            Element message = pairing.getGT().newRandomElement().getImmutable();
+
+            startTime = System.currentTimeMillis();
+            FSPIBMECiphertextSerParameter ciphertext = fspibmeEngine.encryption(engine, publicKey, sk, id, message, tau, tag);
+            endTime = System.currentTimeMillis();
+            System.out.println("加密运行时间：" + (endTime - startTime) + "ms");
+            //System.out.println("enc" + message);
+
+            //Decryption
+            startTime = System.currentTimeMillis();
+
+            StringBuffer decId = new StringBuffer();
+            decId.append(id);
+            decId.append(tau);
+            decId.append(ciphertext.getTag());
+            String strDecId = decId.toString();
+            FSPIBMEESKSerParameter eskId = rk.getTk().get(strDecId);
+
+//            oos = new ObjectOutputStream(new FileOutputStream("outputs/esk"));
+//            oos.writeObject(eskId.getX_rho());
+//            oos.close();
+//            System.out.println(System.currentTimeMillis());
+//            client.sendFile("esk");
+
+            Element anMessage = fspibmeEngine.decryption(engine, publicKey, rk, eskId, id, ciphertext, tau);
+
+            endTime = System.currentTimeMillis();
+            System.out.println("解密运行时间：" + (endTime - startTime) + "ms");
+            //System.out.println("dec" + anMessage);
+
+            //puncture
+            startTime = System.currentTimeMillis();
+            rk = fspibmeEngine.Puncture(publicKey, rk, engine, tau, tag);
+            endTime = System.currentTimeMillis();
+            System.out.println("Puncture运行时间：" + (endTime - startTime) + "ms");
+            System.out.println();
+            //System.out.println("目前RK拥有的结点秘钥有" + rk.getTk().keySet().size() + "个 ：" + rk.getTk().keySet());
+
+
 //        Set<String> set1 = rk.getTk().keySet();
 //        //Update
 //        System.out.println("======Update=====");
@@ -86,7 +144,6 @@ public class FSPIBMEMain {
 //        System.out.println("目前RK拥有的结点秘钥有" + rk.getTk().keySet().size() + "个 ：" + rk.getTk().keySet());
 //        Set<String> set2 = rk.getTk().keySet();
 //        setCompare(set1, set2);
-
-
+        }
     }
 }

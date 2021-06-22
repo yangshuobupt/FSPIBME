@@ -31,9 +31,9 @@ public class FSPIBMEJUnitTest {
 
         long startTime, endTime;
         ObjectOutputStream oos;
-        ObjectInputStream ois;
-        File file;
-        FileTransferClient client = new FileTransferClient();
+//        ObjectInputStream ois;
+//        File file;
+//        FileTransferClient client = new FileTransferClient();
 
 
         PairingParameters pairingParameters = PairingFactory.getPairingParameters(TestUtils.TEST_PAIRING_PARAMETERS_PATH_a_80_256);
@@ -60,6 +60,7 @@ public class FSPIBMEJUnitTest {
                     ids[i] = "0";
                 }
             }
+            System.out.println(num);
             //Keygen
             startTime = System.currentTimeMillis();
             FSPIBMESKeySerParameter sk = fspibmeEngine.SkeyGen(publicKey, masterKey, id);
@@ -99,7 +100,7 @@ public class FSPIBMEJUnitTest {
             FSPIBMECiphertextSerParameter ciphertext = fspibmeEngine.encryption(engine, publicKey, sk, id, message, tau, tag);
             endTime = System.currentTimeMillis();
             System.out.println("加密运行时间：" + (endTime - startTime) + "ms");
-            System.out.println("enc" + message);
+            //System.out.println("enc" + message);
 
             //Decryption
             startTime = System.currentTimeMillis();
@@ -109,7 +110,6 @@ public class FSPIBMEJUnitTest {
             decId.append(tau);
             decId.append(ciphertext.getTag());
             String strDecId = decId.toString();
-            System.out.println(strDecId);
             FSPIBMEESKSerParameter eskId = rk.getTk().get(strDecId);
 
 //            oos = new ObjectOutputStream(new FileOutputStream("outputs/esk"));
@@ -122,13 +122,14 @@ public class FSPIBMEJUnitTest {
 
             endTime = System.currentTimeMillis();
             System.out.println("解密运行时间：" + (endTime - startTime) + "ms");
-            System.out.println("dec" + anMessage);
+            //System.out.println("dec" + anMessage);
 
             //puncture
             startTime = System.currentTimeMillis();
             rk = fspibmeEngine.Puncture(publicKey, rk, engine, tau, tag);
             endTime = System.currentTimeMillis();
             System.out.println("Puncture运行时间：" + (endTime - startTime) + "ms");
+            System.out.println();
             //System.out.println("目前RK拥有的结点秘钥有" + rk.getTk().keySet().size() + "个 ：" + rk.getTk().keySet());
 
 
